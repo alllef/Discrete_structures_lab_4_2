@@ -16,6 +16,8 @@ void sortRibs(int &picks, int &ribs, vector<int> &start, vector<int> &end);
 
 void printTopologicalSort(stack<int> topologicalStack);
 
+void transposeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end);
+
 int main() {
     SetConsoleOutputCP(CP_UTF8);
     vector<int> startVector = {};
@@ -47,37 +49,31 @@ void initializeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end
     inFile.close();
 }
 
-stack<int> topologicalSort(int &picks, int &ribs, vector<int> &start, vector<int> &end) {
+vector<int> DFSLoop(int &picks, int &ribs, vector<int> &start, vector<int> &end, int startPick) {
 
-    int startPick = 1;
     vector<bool> isDFS(picks);
-    vector<int> DFSNumbers(picks);
-    int DFSNumber = 0;
     stack<int> myStack;
-    stack<int> topologicalStack;
     bool notSorted = true;
-
+    int t = 0;
+    vector<int> f(picks);
     while (notSorted) {
 
         myStack.push(startPick);
         isDFS[startPick - 1] = true;
-        DFSNumbers[startPick - 1] = ++DFSNumber;
-
         while (!myStack.empty()) {
             for (int i = 0; i < ribs; i++) {
                 if (start[i] == myStack.top()) {
                     if (isDFS[end[i] - 1] == false) {
                         myStack.push(end[i]);
 
-                        DFSNumbers[end[i] - 1] = ++DFSNumber;
                         isDFS[end[i] - 1] = true;
 
                     }
                 }
 
             }
-            topologicalStack.push(myStack.top());
-
+            t++;
+            f[startPick - 1] = t;
             myStack.pop();
         }
 
@@ -90,7 +86,7 @@ stack<int> topologicalSort(int &picks, int &ribs, vector<int> &start, vector<int
         }
 
     }
-    return topologicalStack;
+    return f;
 }
 
 void sortRibs(int &picks, int &ribs, vector<int> &start, vector<int> &end) {
@@ -114,11 +110,80 @@ void sortRibs(int &picks, int &ribs, vector<int> &start, vector<int> &end) {
     }
 }
 
-void printTopologicalSort(stack<int> topologicalStack) {
-    int topologicalNumber = 0;
-    cout <<setw(22)<< "Топологічний номер " <<setw(11)<< "Вершина\n";
-    while (!topologicalStack.empty()) {
-        cout <<setw(10)<< ++topologicalNumber << setw(15) << topologicalStack.top() << endl;
-        topologicalStack.pop();
+void transposeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end) {
+    int tmp;
+    for (int i = 0; i < ribs; i++) {
+        tmp = start[i];
+        start[i] = end[i];
+        end[i] = tmp;
     }
 }
+
+void reverseSortRibsByTime(int &picks, int &ribs, vector<int> &start, vector<int> &end, vector<int> &t) {
+    int endTmp;
+    int startTmp;
+    for (int i = 0; i < ribs; i++) {
+        for (int j = 0; j < ribs; j++) {
+            if (t[start[j] - 1] + t[end[j] - 1] < t[start[j + 1] - 1] + t[end[j + 1] - 1]) {
+                startTmp = start[j];
+                start[j] = start[j + 1];
+                start[j + 1] = startTmp;
+
+                endTmp = end[j];
+                end[j] = end[j + 1];
+                end[j + 1] = endTmp;
+            }
+        }
+    }
+}
+
+vector<int> reverseDFSLoop(int &picks, int &ribs, vector<int> &start, vector<int> &end, vector<int> f) {
+
+    vector<bool> isDFS(picks);
+    stack<int> myStack;
+    bool notSorted = true;
+    vector<vector<int>> componentsList;
+    vector<int> tmpVector;
+
+    while (notSorted) {
+
+        for (int i = f.size(); i > 0; i--) {
+            for (int j = 0; j < picks; j++) {
+                if (f[j] == i && isDFS[j] == false) {
+                    myStack.push(i + 1);
+                    tmpVector.push_back(i + 1);
+                    isDFS[i] = true;
+                    break;
+                }
+            }
+            if (!myStack.empty()) break;
+
+        }
+        if (myStack.empty()) notSorted = false;
+
+        while (!myStack.empty()) {
+            for (int i = 0; i < ribs; i++) {
+                if (start[i] == myStack.top()) {
+                    if (isDFS[end[i] - 1] == false) {
+                        myStack.push(end[i]);
+                        tmpVector.push_back(end[i]);
+                        isDFS[end[i] - 1] = true;
+
+                    }
+                }
+
+            }
+
+            myStack.pop();
+        }
+        componentsList.push_back(tmpVector);
+        tmpVector.clear();
+    }
+    return tmpVector;
+}
+
+struct Rib {
+public:
+    int start;
+    int end;
+};
