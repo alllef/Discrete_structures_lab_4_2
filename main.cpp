@@ -3,38 +3,44 @@
 #include <stack>
 #include <string>
 #include <fstream>
-#include <iomanip>
 #include<Windows.h>
 
 using namespace std;
 
-void initializeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end);
+struct Rib {
+public:
+    int start;
+    int end;
+};
 
-stack<int> topologicalSort(int &picks, int &ribs, vector<int> &start, vector<int> &end);
+void initializeGraph(int &picks, int &ribs, vector<Rib> &structRibs);
 
-void sortRibs(int &picks, int &ribs, vector<int> &start, vector<int> &end);
+vector<int> DFSLoop(int &picks, int &ribs, int startPick, vector<Rib> &structRibs);
 
-void printTopologicalSort(stack<int> topologicalStack);
+void sortRibs(int &picks, int &ribs, vector<Rib> &structRibs);
 
-void transposeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end);
+void transposeGraph(int &picks, int &ribs, vector<Rib> &structRibs);
+
+void reverseSortRibsByTime(int &picks, int &ribs, vector<int> t, vector<Rib> &structRibs);
+
+vector<vector<int>>
+reverseDFSLoop(int &picks, int &ribs, vector<int> f, vector<Rib> &structRibs);
 
 int main() {
     SetConsoleOutputCP(CP_UTF8);
-    vector<int> startVector = {};
-    vector<int> endVector = {};
-    vector<int> vectorOfPower = {};
+    vector<Rib> ribsList;
     int n = 0, m = 0;
-
-    initializeGraph(n, m, startVector, endVector);
-    sortRibs(n, m, startVector, endVector);
-    printTopologicalSort(topologicalSort(n, m, startVector, endVector));
-
+    initializeGraph(n, m, ribsList);
+    sortRibs(n, m, ribsList);
+    vector<int> time = DFSLoop(n, m, 1, ribsList);
+    transposeGraph(n, m, ribsList);
+   reverseSortRibsByTime(n, m, time, ribsList);
+    reverseDFSLoop(n, m, time, ribsList);
     return 0;
 }
 
-void initializeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end) {
-    int startNumber, endNumber;
-
+void initializeGraph(int &picks, int &ribs, vector<Rib> &structRibs) {
+    Rib myRib{};
     ifstream inFile;
     inFile.open("myGraph.txt");
 
@@ -42,14 +48,14 @@ void initializeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end
     inFile >> picks >> ribs;
 
     for (int i = 0; i < ribs; i++) {
-        inFile >> startNumber >> endNumber;
-        start.push_back(startNumber);
-        end.push_back(endNumber);
+        inFile >> myRib.start >> myRib.end;
+
+        structRibs.push_back(myRib);
     }
     inFile.close();
 }
 
-vector<int> DFSLoop(int &picks, int &ribs, vector<int> &start, vector<int> &end, int startPick) {
+vector<int> DFSLoop(int &picks, int &ribs, int startPick, vector<Rib> &structRibs) {
 
     vector<bool> isDFS(picks);
     stack<int> myStack;
@@ -62,18 +68,18 @@ vector<int> DFSLoop(int &picks, int &ribs, vector<int> &start, vector<int> &end,
         isDFS[startPick - 1] = true;
         while (!myStack.empty()) {
             for (int i = 0; i < ribs; i++) {
-                if (start[i] == myStack.top()) {
-                    if (isDFS[end[i] - 1] == false) {
-                        myStack.push(end[i]);
+                if (structRibs[i].start == myStack.top()) {
+                    if (isDFS[structRibs[i].end - 1] == false) {
+                        myStack.push(structRibs[i].end);
 
-                        isDFS[end[i] - 1] = true;
+                        isDFS[structRibs[i].end - 1] = true;
 
                     }
                 }
 
             }
             t++;
-            f[startPick - 1] = t;
+            f[myStack.top() - 1] = t;
             myStack.pop();
         }
 
@@ -89,55 +95,48 @@ vector<int> DFSLoop(int &picks, int &ribs, vector<int> &start, vector<int> &end,
     return f;
 }
 
-void sortRibs(int &picks, int &ribs, vector<int> &start, vector<int> &end) {
+void sortRibs(int &picks, int &ribs, vector<Rib> &structRibs) {
 
-    int endTmp;
-    int startTmp;
-
+    Rib tmp{};
     for (int i = 0; i < ribs - 1; i++) {
         for (int j = 0; j < ribs - 1; j++) {
-            if ((start[j] + end[j]) > (start[j + 1] + end[j + 1])) {
+            if ((structRibs[j].start + structRibs[j].end) > (structRibs[j + 1].start + structRibs[j + 1].end)) {
 
-                startTmp = start[j];
-                start[j] = start[j + 1];
-                start[j + 1] = startTmp;
+                tmp = structRibs[j];
+                structRibs[j] = structRibs[j + 1];
+                structRibs[j + 1] = tmp;
 
-                endTmp = end[j];
-                end[j] = end[j + 1];
-                end[j + 1] = endTmp;
             }
         }
     }
 }
 
-void transposeGraph(int &picks, int &ribs, vector<int> &start, vector<int> &end) {
+void transposeGraph(int &picks, int &ribs, vector<Rib> &structRibs) {
     int tmp;
     for (int i = 0; i < ribs; i++) {
-        tmp = start[i];
-        start[i] = end[i];
-        end[i] = tmp;
+        tmp = structRibs[i].start;
+        structRibs[i].start = structRibs[i].end;
+        structRibs[i].end = tmp;
     }
 }
 
-void reverseSortRibsByTime(int &picks, int &ribs, vector<int> &start, vector<int> &end, vector<int> &t) {
-    int endTmp;
-    int startTmp;
-    for (int i = 0; i < ribs; i++) {
-        for (int j = 0; j < ribs; j++) {
-            if (t[start[j] - 1] + t[end[j] - 1] < t[start[j + 1] - 1] + t[end[j + 1] - 1]) {
-                startTmp = start[j];
-                start[j] = start[j + 1];
-                start[j + 1] = startTmp;
+void reverseSortRibsByTime(int &picks, int &ribs, vector<int> t, vector<Rib> &structRibs) {
 
-                endTmp = end[j];
-                end[j] = end[j + 1];
-                end[j + 1] = endTmp;
+    Rib tmp{};
+    for (int i = 0; i < ribs; i++) {
+        for (int j = 0; j < ribs-1; j++) {
+            if (t[structRibs[j].start - 1] + t[structRibs[j].end - 1] <
+                t[structRibs[j + 1].start - 1] + t[structRibs[j + 1].end - 1]) {
+                tmp = structRibs[j];
+                structRibs[j] = structRibs[j + 1];
+                structRibs[j + 1] = tmp;
             }
         }
     }
 }
 
-vector<int> reverseDFSLoop(int &picks, int &ribs, vector<int> &start, vector<int> &end, vector<int> f) {
+vector<vector<int>>
+reverseDFSLoop(int &picks, int &ribs, vector<int> f, vector<Rib> &structRibs) {
 
     vector<bool> isDFS(picks);
     stack<int> myStack;
@@ -150,9 +149,9 @@ vector<int> reverseDFSLoop(int &picks, int &ribs, vector<int> &start, vector<int
         for (int i = f.size(); i > 0; i--) {
             for (int j = 0; j < picks; j++) {
                 if (f[j] == i && isDFS[j] == false) {
-                    myStack.push(i + 1);
-                    tmpVector.push_back(i + 1);
-                    isDFS[i] = true;
+                    myStack.push(i);
+                    tmpVector.push_back(i);
+                    isDFS[i-1] = true;
                     break;
                 }
             }
@@ -163,11 +162,11 @@ vector<int> reverseDFSLoop(int &picks, int &ribs, vector<int> &start, vector<int
 
         while (!myStack.empty()) {
             for (int i = 0; i < ribs; i++) {
-                if (start[i] == myStack.top()) {
-                    if (isDFS[end[i] - 1] == false) {
-                        myStack.push(end[i]);
-                        tmpVector.push_back(end[i]);
-                        isDFS[end[i] - 1] = true;
+                if (structRibs[i].start == myStack.top()) {
+                    if (isDFS[structRibs[i].end - 1] == false) {
+                        myStack.push(structRibs[i].end);
+                        tmpVector.push_back(structRibs[i].end);
+                        isDFS[structRibs[i].end - 1] = true;
 
                     }
                 }
@@ -176,14 +175,12 @@ vector<int> reverseDFSLoop(int &picks, int &ribs, vector<int> &start, vector<int
 
             myStack.pop();
         }
-        componentsList.push_back(tmpVector);
+      if(!tmpVector.empty())  componentsList.push_back(tmpVector);
         tmpVector.clear();
+
+
+
     }
-    return tmpVector;
+    return componentsList;
 }
 
-struct Rib {
-public:
-    int start;
-    int end;
-};
