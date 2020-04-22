@@ -28,17 +28,21 @@ reverseDFSLoop(int &picks, int &ribs, vector<int> vertices, vector<Rib> &structR
 
 vector<int> sortPicksByTime(vector<int> f);
 
+int PickExists(int pick, vector<Rib> &structRibs, vector<bool> &isDFS);
+
+vector<vector<int>> stronglyConnectedComponents(int &picks, int &ribs, vector<Rib> &structRibs);
+
 int main() {
     SetConsoleOutputCP(CP_UTF8);
     vector<Rib> ribsList;
     int n = 0, m = 0;
     initializeGraph(n, m, ribsList);
     sortRibs(n, m, ribsList);
-    vector<int> time = DFSLoop(n, m, ribsList);
-
+    stronglyConnectedComponents(n,m,ribsList);
+    /*vector<int> time = DFSLoop(n, m, ribsList);
     transposeGraph(n, m, ribsList);
     reverseSortRibsByTime(n, m, time, ribsList);
-    reverseDFSLoop(n, m, sortPicksByTime(time), ribsList);
+    reverseDFSLoop(n, m, sortPicksByTime(time), ribsList);*/
     return 0;
 }
 
@@ -65,6 +69,7 @@ vector<int> DFSLoop(int &picks, int &ribs, vector<Rib> &structRibs) {
     bool notSorted = true;
     int t = 0;
     vector<int> f(picks);
+
     while (notSorted) {
         for (int i = 0; i < picks; i++) {
             if (isDFS[i] == false) {
@@ -72,27 +77,20 @@ vector<int> DFSLoop(int &picks, int &ribs, vector<Rib> &structRibs) {
                 isDFS[i] = true;
                 break;
             }
-            if (i == picks - 1 && isDFS[i] == true) notSorted = false;
         }
+        if (myStack.empty()) notSorted = false;
 
         while (!myStack.empty()) {
-            for (int i = 0; i < ribs; i++) {
-                if (structRibs[i].start == myStack.top()) {
-                    if (isDFS[structRibs[i].end - 1] == false) {
-                        myStack.push(structRibs[i].end);
-
-                        isDFS[structRibs[i].end - 1] = true;
-
-                    }
-                }
-
+            if (PickExists(myStack.top(), structRibs, isDFS)) {
+                int currentPick = PickExists(myStack.top(), structRibs, isDFS);
+                isDFS[currentPick - 1] = true;
+                myStack.push(currentPick);
+            } else {
+                t++;
+                f[myStack.top() - 1] = t;
+                myStack.pop();
             }
-            t++;
-            f[myStack.top() - 1] = t;
-            myStack.pop();
         }
-
-
     }
     return f;
 }
@@ -151,7 +149,7 @@ reverseDFSLoop(int &picks, int &ribs, vector<int> vertices, vector<Rib> &structR
         for (int i = 0; i < picks; i++) {
             if (isDFS[vertices[i] - 1] == false) {
                 myStack.push(vertices[i]);
-                isDFS[vertices[i]-1]=true;
+                isDFS[vertices[i] - 1] = true;
                 tmpVector.push_back(vertices[i]);
                 break;
             }
@@ -160,19 +158,14 @@ reverseDFSLoop(int &picks, int &ribs, vector<int> vertices, vector<Rib> &structR
         if (myStack.empty()) notSorted = false;
 
         while (!myStack.empty()) {
-            for (int i = 0; i < ribs; i++) {
-                if (structRibs[i].start == myStack.top()) {
-                    if (isDFS[structRibs[i].end - 1] == false) {
-                        myStack.push(structRibs[i].end);
-                        tmpVector.push_back(structRibs[i].end);
-                        isDFS[structRibs[i].end - 1] = true;
+            if (PickExists(myStack.top(), structRibs, isDFS)) {
+                int currentPick = PickExists(myStack.top(), structRibs, isDFS);
+                isDFS[currentPick - 1] = true;
+                myStack.push(currentPick);
+                tmpVector.push_back(currentPick);
+            } else myStack.pop();
 
-                    }
-                }
 
-            }
-
-            myStack.pop();
         }
         if (!tmpVector.empty()) componentsList.push_back(tmpVector);
         tmpVector.clear();
@@ -183,9 +176,27 @@ reverseDFSLoop(int &picks, int &ribs, vector<int> vertices, vector<Rib> &structR
 }
 
 vector<int> sortPicksByTime(vector<int> f) {
-    vector<int> vertices(f.size());
-    for (int i = 0; i < f.size(); i++) {
-        vertices[f[i] - 1] = i + 1;
+    int b = 0;
+    vector<int> vertices;
+    for (int i = f.size(); i > 0; i--) {
+        for(int j=1; j<=f.size(); j++){
+            if(f[j-1]==i) vertices.push_back(j);
+        }
     }
     return vertices;
+}
+
+int PickExists(int pick, vector<Rib> &structRibs, vector<bool> &isDFS) {
+    for (int i = 0; i < structRibs.size(); i++) {
+        if (structRibs[i].start == pick && isDFS[structRibs[i].end - 1] == false) return structRibs[i].end;
+
+    }
+    return 0;
+}
+
+vector<vector<int>> stronglyConnectedComponents(int &picks, int &ribs, vector<Rib> &structRibs){
+    vector<int> time = DFSLoop(picks, ribs, structRibs);
+    transposeGraph(picks, ribs, structRibs);
+    reverseSortRibsByTime(picks, ribs, time, structRibs);
+    return    reverseDFSLoop(picks, ribs, sortPicksByTime(time), structRibs);
 }
