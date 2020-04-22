@@ -32,17 +32,15 @@ int PickExists(int pick, vector<Rib> &structRibs, vector<bool> &isDFS);
 
 vector<vector<int>> stronglyConnectedComponents(int &picks, int &ribs, vector<Rib> &structRibs);
 
+void printStronglyConnectedComponents(vector<vector<int>> componentsList);
+
 int main() {
     SetConsoleOutputCP(CP_UTF8);
     vector<Rib> ribsList;
     int n = 0, m = 0;
     initializeGraph(n, m, ribsList);
     sortRibs(n, m, ribsList);
-    stronglyConnectedComponents(n,m,ribsList);
-    /*vector<int> time = DFSLoop(n, m, ribsList);
-    transposeGraph(n, m, ribsList);
-    reverseSortRibsByTime(n, m, time, ribsList);
-    reverseDFSLoop(n, m, sortPicksByTime(time), ribsList);*/
+    printStronglyConnectedComponents(stronglyConnectedComponents(n,m,ribsList));
     return 0;
 }
 
@@ -176,7 +174,6 @@ reverseDFSLoop(int &picks, int &ribs, vector<int> vertices, vector<Rib> &structR
 }
 
 vector<int> sortPicksByTime(vector<int> f) {
-    int b = 0;
     vector<int> vertices;
     for (int i = f.size(); i > 0; i--) {
         for(int j=1; j<=f.size(); j++){
@@ -187,8 +184,8 @@ vector<int> sortPicksByTime(vector<int> f) {
 }
 
 int PickExists(int pick, vector<Rib> &structRibs, vector<bool> &isDFS) {
-    for (int i = 0; i < structRibs.size(); i++) {
-        if (structRibs[i].start == pick && isDFS[structRibs[i].end - 1] == false) return structRibs[i].end;
+    for (auto & structRib : structRibs) {
+        if (structRib.start == pick && isDFS[structRib.end - 1] == false) return structRib.end;
 
     }
     return 0;
@@ -199,4 +196,15 @@ vector<vector<int>> stronglyConnectedComponents(int &picks, int &ribs, vector<Ri
     transposeGraph(picks, ribs, structRibs);
     reverseSortRibsByTime(picks, ribs, time, structRibs);
     return    reverseDFSLoop(picks, ribs, sortPicksByTime(time), structRibs);
+}
+
+void printStronglyConnectedComponents(vector<vector<int>> componentsList){
+cout << " В графі є "<<componentsList.size()<< " Сильнозв'язаних компоненти\n";
+for(int i=0; i<componentsList.size(); i++){
+    cout<< "В компоненті "<<i+1<< " знаходяться вершини ";
+    for(int j : componentsList[i]){
+       cout<< j<< " ";
+    }
+    cout<<endl;
+}
 }
